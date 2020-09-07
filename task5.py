@@ -3,6 +3,7 @@ from Crypto.Cipher import *
 from padding import pad, unpad
 from base64 import b64encode
 import sys
+import os
 
 # Below is copyright notice for padding functions
 #
@@ -40,24 +41,29 @@ import sys
 
 hex_iv = 'aabbccddeeff00998877665544332211'
 iv = int(hex_iv,16)
+# convert hex to 16-byte iv
+bytes_iv = bytes.fromhex(hex_iv)
 
-bytes_ptxt1 = b"you captured the"
-hex_ptxt1=bytes_ptxt1.hex()
-ptxt1=int(hex_ptxt1,16)
+with open(os.path.join(sys.path[0], "plaintext"), "r") as f:
+    plaintext = f.read().encode('utf-8')
+padded = pad(plaintext, 16)
 
-bytes_ptxt2 = b" flag"
-bytes_ptxt2_padded=pad(bytes_ptxt2,16)
-hex_ptxt2=bytes_ptxt2_padded.hex()
-ptxt2=int(hex_ptxt2,16)
+hex_cipher='46beb3b832973495f79b860884245e431d73c2d3f7e3a7632dce894ed14ff62b'
+bytes_cipher = bytes.fromhex(hex_cipher)
 
-hex_cipher1='46beb3b832973495f79b860884245e43'
-hex_cipher2='1d73c2d3f7e3a7632dce894ed14ff62b'
-cipher1=int(hex_cipher1,16)
-cipher2=int(hex_cipher2,16)
-
-# xor of IV and first 16 bytes of plaintext -- outputs with int
-xor = iv^ptxt1
-print("xor: ", xor)
-# xor2 is xor of last 16 bytes of plaintext and first 16 of ciphertext
-xor2 = cipher1^ptxt2
-print("xor2: ", xor2)
+with open(os.path.join(sys.path[0], "words.txt"), "r") as key_file:
+  for line in key_file:
+    potential_key = line.strip()
+    if (len(potential_key) > 16):
+        continue
+    if (len(potential_key) < 16):
+        hash_number = 16-len(potential_key)
+        hashes = "#"*hash_number
+        potential_key+=hashes
+    bytes_pkey = potential_key.encode('utf-8')
+    cipher = AES.new(bytes_pkey, AES.MODE_CBC, bytes_iv)
+    compare_cipher = cipher.encrypt(padded)
+    if (bytes_cipher == compare_cipher):
+        key = potential_key
+        print(key)
+        break
